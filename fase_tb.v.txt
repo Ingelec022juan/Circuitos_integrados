@@ -1,0 +1,80 @@
+`timescale 1ns/1ps
+
+module tb_Phase_Correct_PWM;
+
+    // Entradas
+    reg clk;
+    reg reset;
+    reg [31:0] TIMER_CNT;
+    reg [31:0] TIMER_TOP;
+    reg [31:0] PWM_CNTA;
+    reg [31:0] PWM_CNTB;
+    reg direction;
+
+    // Salidas
+    wire PWM_OUTA;
+    wire PWM_OUTB;
+
+    // Instancia del módulo bajo prueba (DUT)
+    Phase_Correct_PWM dut (
+        .clk(clk),
+        .reset(reset),
+        .TIMER_CNT(TIMER_CNT),
+        .TIMER_TOP(TIMER_TOP),
+        .PWM_CNTA(PWM_CNTA),
+        .PWM_CNTB(PWM_CNTB),
+        .direction(direction),
+        .PWM_OUTA(PWM_OUTA),
+        .PWM_OUTB(PWM_OUTB)
+    );
+
+    // Generación del reloj
+    always #5 clk = ~clk; // Periodo de 10 ns (frecuencia de 100 MHz)
+
+    initial begin
+        // Inicialización de señales
+        clk = 0;
+        reset = 0;
+        TIMER_CNT = 0;
+        TIMER_TOP = 100;
+        PWM_CNTA = 30;
+        PWM_CNTB = 70;
+        direction = 0;
+
+        // Generación del archivo VCD
+        $dumpfile("fase.vcd");
+        $dumpvars(0, tb_Phase_Correct_PWM);
+
+        // Escenario de prueba
+        #10 reset = 1; // Activar reset
+        #10 reset = 0; // Desactivar reset
+
+        // Simulación de TIMER_CNT aumentando en dirección ascendente
+        repeat(120) begin
+            #10;
+            TIMER_CNT = (TIMER_CNT < TIMER_TOP) ? TIMER_CNT + 1 : 0;
+        end
+
+        // Cambiar el valor de direction y simular conteo descendente
+        direction = 1;
+        #10;
+        repeat(120) begin
+            #10;
+            TIMER_CNT = (TIMER_CNT > 0) ? TIMER_CNT - 1 : TIMER_TOP;
+        end
+
+        // Cambiar PWM_CNTA y PWM_CNTB para nuevos valores de comparación
+        PWM_CNTA = 50;
+        PWM_CNTB = 20;
+        #10;
+        repeat(120) begin
+            #10;
+            TIMER_CNT = (TIMER_CNT < TIMER_TOP) ? TIMER_CNT + 1 : 0;
+        end
+
+        // Finalizar simulación
+        #50;
+        $finish;
+    end
+
+endmodule
